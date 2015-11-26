@@ -1,6 +1,5 @@
 package cup.example;
 
-import java_cup.runtime.*;
 
 class Driver {
 
