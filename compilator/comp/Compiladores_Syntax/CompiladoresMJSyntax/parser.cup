@@ -15,7 +15,7 @@ import java.io.FileInputStream;
 parser code {:
     protected Lexer lexer;
 :}
- 
+
 /* define how to connect to the scanner! */
 init with {:
   ComplexSymbolFactory f = new ComplexSymbolFactory();
@@ -32,7 +32,9 @@ init with {:
 scan with {: return lexer.next_token(); :};
  
 /* Terminals (tokens returned by the scanner). */
-terminal CLASS, PUBLIC, EXTENDS, STATIC, VOID, INT, STRING, BOOLEAN, WHILE, IF, ELSE, RETURN, FALSE, TRUE, THIS, NEW, MAIN, AND, LT,PLUS, MINUS, MULT, NOT, ASSIGN, SEMICOLON, COMMA, DOT, PARENTHLEFT, PARENTHRIGHT, BRACKETSLEFT, BRACKETSRIGHT, CURLBRACKETSLEFT, CURLBRACKETSRIGHT, SYSO, LENGTH;
+terminal CLASS, PUBLIC, EXTENDS, STATIC, VOID, INT, STRING, BOOLEAN, WHILE, IF,
+ 			ELSE, RETURN, FALSE, TRUE, THIS, NEW, MAIN, AND, LT,PLUS, MINUS, MULT, NOT, ASSIGN, SEMICOLON,
+ 			 	COMMA, DOT, PARENTHLEFT, PARENTHRIGHT, BRACKETSLEFT, BRACKETSRIGHT, CURLBRACKETSLEFT, CURLBRACKETSRIGHT, SYSO, LENGTH;
 terminal Integer    NUMBER_LIT;
 terminal String     IDENTIFIER;
  
@@ -51,9 +53,9 @@ non terminal   VarDeclList VarDeclarations;
 non terminal   MethodDeclList MethodDeclarations;
 non terminal   StatementList Statements;
 non terminal   ExpList ExpressionList;
-non terminal   Argument Arg;
+/*non terminal   Argument Arg;
 non terminal   ArgumentList Args;
-non terminal   Formal Formal;
+*/non terminal   Formal Formal;
 non terminal   FormalList Formals;
  
 /* Precedences */
@@ -78,26 +80,31 @@ Goal  ::= MainClass:mc  ClassDeclarations:cs  {: RESULT = new Program(mc, cs); :
  
 ClassDeclarations ::= {: RESULT = new ClassDeclList(); :}
                     | ClassDeclarations:cl ClassDeclaration:c  {: cl.addElement(c); RESULT = cl; :};
- 
+ExpressionList ::= {: RESULT = new ExpList(); :}
+                    | ExpressionList:el Expression:e  {: el.addElement(e); RESULT = el; :};
+                    
 VarDeclarations ::= {: RESULT = new VarDeclList();:}
                   | VarDeclarations:vl VarDeclaration:v  {: vl.addElement(v); RESULT = vl;:};
 MethodDeclarations ::= {:RESULT = new MethodDeclList();:}
                      | MethodDeclarations:ml MethodDeclaration:m  {: ml.addElement(m); RESULT = ml;:};
 Statements ::= {:RESULT = new StatementList();:}
              | Statement:s Statements:sl {:sl.addElement(s); RESULT = sl;:};
- 
-Arguments ::= {:RESULT = new ;:}
-          | Type:tp Identifier:id ExtraArgs:eArgs {:sb.setLength(0);RESULT = sb.append(tp).append(" ").append(id).append(eArgs).toString();:};
-ExtraArgs::= {:RESULT = "";:}
-  | COMMA Type:tp Identifier:id ExtraArgs:eArgs  
+Formals ::={:RESULT = new FormalList();:}
+					| Formals:fl Formal:f {: fl.addElement(f); RESULT = fl;:}; 
+ /*ExtraArgs::= {:RESULT = "";:}
+  | COMMA Type:tp Identifier:id ExtraArgs:eArgs
     {:sb.setLength(0);RESULT = sb.append(", ").append(tp).append(" ").append(id).append(eArgs).toString();:};
-ExpArguments ::= {:RESULT = "";:}
+   */ 
+/*Arguments ::= {:RESULT = new ;:}
+          | Type:tp Identifier:id Args:eArgs {:sb.setLength(0);RESULT = sb.append(tp).append(" ").append(id).append(eArgs).toString();:};
+*/
+/*ExpArguments ::= {:RESULT = "";:}
   | Expression:exp ExtraExpArgs:eArgs
   {:sb.setLength(0);RESULT = sb.append(exp).append(eArgs).toString();:};
 ExtraExpArgs::= {:RESULT = "";:}
   | COMMA Expression:exp ExtraExpArgs:eArgs
     {:sb.setLength(0);RESULT = sb.append(", ").append(exp).append(eArgs).toString();:};
-
+*/
  
 //Other
  
@@ -108,17 +115,19 @@ ClassDeclaration  ::=  CLASS Identifier:id EXTENDS Identifier:exId CURLBRACKETSL
                 {: RESULT = new ClassDeclExtends(id, exId, vars, methods);:}
                       | CLASS Identifier:id CURLBRACKETSLEFT VarDeclarations:vars MethodDeclarations:methods CURLBRACKETSRIGHT
                             {: RESULT = new ClassDeclSimple(id, vars, methods); :};
+                            
+                            
  
-VarDeclaration  ::= Type:tp Identifier:id SEMICOLON {:RESULT = new VarDecl(tp,id);:};                      
+VarDeclaration  ::= Type:tp Identifier:id SEMICOLON {:RESULT = new VarDecl(tp,id);:};           
  
-MethodDeclaration ::= PUBLIC Type:tp Identifier:id PARENTHLEFT Args:args PARENTHRIGHT CURLBRACKETSLEFT VarDeclarations:vars Statements:stmts RETURN Expression:retExp SEMICOLON CURLBRACKETSRIGHT
+MethodDeclaration ::= PUBLIC Type:tp Identifier:id PARENTHLEFT Formals:args PARENTHRIGHT CURLBRACKETSLEFT VarDeclarations:vars Statements:stmts RETURN Expression:retExp SEMICOLON CURLBRACKETSRIGHT
            {: RESULT = new MethodDecl(tp,id,args,vars,stmts,retExp); :};
  
  
 Type  ::= INT BRACKETSLEFT BRACKETSRIGHT  {:RESULT = new IntArrayType();:}
         | BOOLEAN             {:RESULT = new BooleanType();:}
         | INT                 {:RESULT = new IntegerType();:}
-        | Identifier:id           {:RESULT = new IdentifierType(id);:};
+        | IDENTIFIER:id           {:RESULT = new IdentifierType(id);:};
  
  
 Statement ::= CURLBRACKETSLEFT Statements:stmts CURLBRACKETSRIGHT {: RESULT= new Block(stmts); :}
@@ -137,12 +146,12 @@ Expression  ::= Expression:e1 PLUS Expression:e2 {:RESULT = new Plus(e1,e2);:}
               | Expression:e1 MULT Expression:e2 {:RESULT = new Times(e1,e2);:}
               | Expression:e1 LT Expression:e2 {:RESULT = new LessThan(e1,e2);:}
               | Expression:e1 BRACKETSLEFT Expression:ebrkt BRACKETSRIGHT {:RESULT = new ArrayLookup(e1,ebrkt);:}
-              | Expression:exp DOT LENGTH {: RESULT = new ArrayLenght(exp); :}
-              | Expression:exp DOT Identifier:id PARENTHLEFT Args:args PARENTHRIGHT {: RESULT = new Call(exp,id,args);:}
-              | NUMBER_LIT:num {: RETURN = new IntegerLiteral(num);:}
+              | Expression:exp DOT LENGTH {: RESULT = new ArrayLength(exp); :}
+              | Expression:exp DOT Identifier:id PARENTHLEFT ExpressionList:args PARENTHRIGHT {: RESULT = new Call(exp,id,args);:}
+              | NUMBER_LIT:num {: RESULT = new IntegerLiteral(num);:}
               | TRUE  {:RESULT = new True(); :}
               | FALSE   {:RESULT = new False(); :}
-              | Identifier:id {: RESULT = new IdentifierExp(id); :}
+              | IDENTIFIER:id {: RESULT = new IdentifierExp(id); :}
               | THIS {:RESULT = new This(); :}
               | NEW INT BRACKETSLEFT Expression:exp BRACKETSRIGHT {:RESULT = new NewArray(exp);:}
               | NEW Identifier:id PARENTHLEFT PARENTHRIGHT {: RESULT = new NewObject(id); :}

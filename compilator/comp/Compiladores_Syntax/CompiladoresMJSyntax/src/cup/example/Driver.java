@@ -1,5 +1,7 @@
 package cup.example;
 
+import ast.Program;
+import visitor.PrettyPrintVisitor;
 
 class Driver {
 
@@ -10,6 +12,11 @@ class Driver {
 		Parser parser = new Parser();
 		parser.parse();
 		parser.debug_parse();
+		//programa na forma de AST
+		Program prog = (Program)parser.parse().value;
+		//chama o visitor de pretty print
+		prog.accept(new PrettyPrintVisitor());
+		
 	}
 	
 }
