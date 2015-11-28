@@ -1,56 +1,63 @@
 /*
-   Simple +/-/* expression language; 
+   Simple +/-/* expression language;
    parser evaluates constant expressions on the fly
 */
-
+ 
 package cup.example;
-
+ 
+import ast.*;
 import java_cup.runtime.*;
 import cup.example.Lexer;
 import java.io.IOException;
 import java.io.File;
 import java.io.FileInputStream;
-
+ 
 parser code {:
-  	protected Lexer lexer;
-	protected StringBuffer sb; 
+    protected Lexer lexer;
 :}
-
+ 
 /* define how to connect to the scanner! */
 init with {:
-  sb = new StringBuffer();
   ComplexSymbolFactory f = new ComplexSymbolFactory();
   symbolFactory = f;
-  System.out.println("De o nome de um arquivo como argumento para le-lo, ou nenhum argumento para ler input.txt");
-  File file = new File(Driver.args.length > 0 ? Driver.args[0] : "input.txt");
+  File file = new File("input.txt");
   FileInputStream fis = null;
   try {
     fis = new FileInputStream(file);
   } catch (IOException e) {
     e.printStackTrace();
-  } 
+  }
   lexer = new Lexer(f,fis);
 :};
 scan with {: return lexer.next_token(); :};
-
+ 
 /* Terminals (tokens returned by the scanner). */
 terminal CLASS, PUBLIC, EXTENDS, STATIC, VOID, INT, STRING, BOOLEAN, WHILE, IF, ELSE, RETURN, FALSE, TRUE, THIS, NEW, MAIN, AND, LT,PLUS, MINUS, MULT, NOT, ASSIGN, SEMICOLON, COMMA, DOT, PARENTHLEFT, PARENTHRIGHT, BRACKETSLEFT, BRACKETSRIGHT, CURLBRACKETSLEFT, CURLBRACKETSRIGHT, SYSO, LENGTH;
 terminal Integer    NUMBER_LIT;
 terminal String     IDENTIFIER;
-
+ 
 /* Non terminals */
-non terminal    Goal;
-non terminal String ClassDeclaration, Identifier, MainClass,
-                VarDeclaration, MethodDeclaration, Statement, Type,
-                Expression,
-//Auxiliar
-                ClassDeclarations, VarDeclarations, MethodDeclarations,
-                Statements, Arguments, ExtraArgs, Operator, ExpArguments, ExtraExpArgs
-                ;
-//non terminal Integer    expr;      // used to store evaluated subexpressions
-
+non terminal   Program Goal;
+non terminal   ClassDecl ClassDeclaration;
+non terminal   Identifier Identifier;
+non terminal   MainClass MainClass;
+non terminal   VarDecl VarDeclaration;
+non terminal   MethodDecl MethodDeclaration;
+non terminal   Statement Statement;
+non terminal   Type Type;
+non terminal   Exp Expression;
+non terminal   ClassDeclList ClassDeclarations;
+non terminal   VarDeclList VarDeclarations;
+non terminal   MethodDeclList MethodDeclarations;
+non terminal   StatementList Statements;
+non terminal   ExpList ExpressionList;
+non terminal   Argument Arg;
+non terminal   ArgumentList Args;
+non terminal   Formal Formal;
+non terminal   FormalList Formals;
+ 
 /* Precedences */
-
+ 
 precedence left AND;
 precedence left NOT;
 precedence left LT;
@@ -60,106 +67,87 @@ precedence left DOT;
 precedence left BRACKETSLEFT;
 precedence left PARENTHLEFT;
 precedence left CURLBRACKETSLEFT;
-precedence left VarDeclaration; 
+precedence left VarDeclaration;
 precedence left ASSIGN;
 /* The grammar rules */
 //Start
-Goal  ::= MainClass:mc  ClassDeclarations:cs  {:System.out.println("Start(" + mc + cs + ")");:}; 
-
-
+ 
+Goal  ::= MainClass:mc  ClassDeclarations:cs  {: RESULT = new Program(mc, cs); :};
+ 
 //Auxiliar
-//{:sb.setLength(0);RESULT = sb.append("Exp(").append().append(")").toString();:}
-ClassDeclarations ::= {:RESULT = "";:}
-  | ClassDeclarations:cl ClassDeclaration:c  
-	{:sb.setLength(0);RESULT = sb.append(c).append(cl).toString();:};
-VarDeclarations ::= {:RESULT = "";:}
-  | VarDeclarations:vl VarDeclaration:v 
-	{:sb.setLength(0);RESULT = sb.append(v).append(vl).toString();:};
-MethodDeclarations ::= {:RESULT = "";:}
-  | MethodDeclarations:ml MethodDeclaration:m  
-  	{:sb.setLength(0);RESULT = sb.append(m).append(ml).toString();:};
-Statements ::= {:RESULT = "";:}
-  | Statement:s Statements:sl 
-  	{:sb.setLength(0);RESULT = sb.append(s).append(sl).toString();:};
-Arguments ::= {:RESULT = "";:}
-	| Type:tp Identifier:id ExtraArgs:eArgs 
-	{:sb.setLength(0);RESULT = sb.append(tp).append(" ").append(id).append(eArgs).toString();:};
+ 
+ClassDeclarations ::= {: RESULT = new ClassDeclList(); :}
+                    | ClassDeclarations:cl ClassDeclaration:c  {: cl.addElement(c); RESULT = cl; :};
+ 
+VarDeclarations ::= {: RESULT = new VarDeclList();:}
+                  | VarDeclarations:vl VarDeclaration:v  {: vl.addElement(v); RESULT = vl;:};
+MethodDeclarations ::= {:RESULT = new MethodDeclList();:}
+                     | MethodDeclarations:ml MethodDeclaration:m  {: ml.addElement(m); RESULT = ml;:};
+Statements ::= {:RESULT = new StatementList();:}
+             | Statement:s Statements:sl {:sl.addElement(s); RESULT = sl;:};
+ 
+Arguments ::= {:RESULT = new ;:}
+          | Type:tp Identifier:id ExtraArgs:eArgs {:sb.setLength(0);RESULT = sb.append(tp).append(" ").append(id).append(eArgs).toString();:};
 ExtraArgs::= {:RESULT = "";:}
-	| COMMA Type:tp Identifier:id ExtraArgs:eArgs  
-		{:sb.setLength(0);RESULT = sb.append(", ").append(tp).append(" ").append(id).append(eArgs).toString();:};
+  | COMMA Type:tp Identifier:id ExtraArgs:eArgs  
+    {:sb.setLength(0);RESULT = sb.append(", ").append(tp).append(" ").append(id).append(eArgs).toString();:};
 ExpArguments ::= {:RESULT = "";:}
-	| Expression:exp ExtraExpArgs:eArgs 
-	{:sb.setLength(0);RESULT = sb.append(exp).append(eArgs).toString();:};
+  | Expression:exp ExtraExpArgs:eArgs
+  {:sb.setLength(0);RESULT = sb.append(exp).append(eArgs).toString();:};
 ExtraExpArgs::= {:RESULT = "";:}
-	| COMMA Expression:exp ExtraExpArgs:eArgs 
-		{:sb.setLength(0);RESULT = sb.append(", ").append(exp).append(eArgs).toString();:};
-Operator ::=  AND {:RESULT = "OP (&&)";:} | LT {:RESULT = "OP (<)";:} 
-			| PLUS {:RESULT = "OP (+)";:} | MINUS {:RESULT = "OP (-)";:} 
-			| MULT {:RESULT = "OP (*)";:} ;
+  | COMMA Expression:exp ExtraExpArgs:eArgs
+    {:sb.setLength(0);RESULT = sb.append(", ").append(exp).append(eArgs).toString();:};
 
-
-//Other	
-
+ 
+//Other
+ 
 MainClass ::= CLASS Identifier:id CURLBRACKETSLEFT PUBLIC STATIC VOID MAIN PARENTHLEFT STRING BRACKETSLEFT BRACKETSRIGHT Identifier:arg PARENTHRIGHT CURLBRACKETSLEFT Statement:stm CURLBRACKETSRIGHT CURLBRACKETSRIGHT
-				{:sb.setLength(0);RESULT = sb.append("Main Class(").append(id).append("Main (String[] ").append(arg).append(") {\n").append(stm).append("\n})").toString();:};
-
-ClassDeclaration  ::=  CLASS Identifier:id EXTENDS Identifier:exId CURLBRACKETSLEFT VarDeclarations:vars MethodDeclarations:methods CURLBRACKETSRIGHT 
-								{:sb.setLength(0);RESULT = sb.append("Class(").append(id).append("extends ").append(exId).append("{\n").append(vars).append(methods).append("\n}\n)").toString();:}
-                      |CLASS Identifier:id CURLBRACKETSLEFT VarDeclarations:vars MethodDeclarations:methods CURLBRACKETSRIGHT
-                       			{:sb.setLength(0);RESULT = sb.append("Class(").append(id).append("{\n").append(vars).append(methods).append("\n})\n").toString();:};
-
-VarDeclaration  ::= Type:tp Identifier:id SEMICOLON {:sb.setLength(0);RESULT = sb.append("Var (").append(tp).append(id).append(");\n").toString(); System.out.println("declared var " + RESULT);:};                      
-
-MethodDeclaration ::= PUBLIC Type:tp Identifier:id PARENTHLEFT Arguments:args PARENTHRIGHT CURLBRACKETSLEFT VarDeclarations:vars Statements:stmts RETURN Expression:retExp SEMICOLON CURLBRACKETSRIGHT
-					 {:sb.setLength(0);RESULT = sb.append("Method (").append(tp).append(id).append("(").append(args).append(")").append("{\n").append(vars).append(stmts).append("return ").append(retExp).append("\n}\n").toString(); :};
-
-
-Type  ::= INT BRACKETSLEFT BRACKETSRIGHT	{:RESULT = "type(int[])";:}
-| BOOLEAN									{:RESULT = "type(boolean)";:}
-| INT 										{:RESULT = "type(int)";:}
-| Identifier:id 							{:RESULT = "type("+id+")";:}; 
-
-
-Statement ::= CURLBRACKETSLEFT Statements:stmts CURLBRACKETSRIGHT 
-			{:sb.setLength(0); RESULT=sb.append("{\n").append(stmts).append("\n}").toString();:} 
-| IF PARENTHLEFT Expression:exp PARENTHRIGHT Statement:stmt ELSE Statement:stmt2
-			{:sb.setLength(0); RESULT=sb.append("if(").append(exp).append("){\n").append(stmt).append("\n} else {\n").append(stmt2).append("\n})").toString();:}
-| WHILE PARENTHLEFT Expression:exp PARENTHRIGHT Statement:stmt
-	{:sb.setLength(0); RESULT=sb.append("while(").append(exp).append("){\n").append(stmt).append("\n})").toString();:}
-| SYSO PARENTHLEFT Expression:exp PARENTHRIGHT SEMICOLON
-	{:sb.setLength(0); RESULT=sb.append("SYSO(").append(exp).append(");").toString();:}
-| Identifier:id ASSIGN Expression:exp SEMICOLON
-	{:sb.setLength(0); RESULT=sb.append("Assign(").append(id).append("<-").append(exp).append(";").toString();:}
-| Identifier:id BRACKETSLEFT Expression:indexExp BRACKETSRIGHT ASSIGN Expression:exp SEMICOLON
-	{:sb.setLength(0); RESULT=sb.append("Assign(").append(id).append("[").append(indexExp).append("]<-").append(exp).append(";").toString();:};
-
-
-Expression  ::= Expression:e1 Operator:op Expression:e2 
-	{:sb.setLength(0);RESULT = sb.append("Exp(").append(e1).append(" ").append(op).append(" ").append(e2).append(")").toString();:} 
-| Expression:e1 BRACKETSLEFT Expression:ebrkt BRACKETSRIGHT
-	{:sb.setLength(0);RESULT = sb.append("Exp(").append(e1).append("[").append(ebrkt).append("]").append(")").toString();:}
-| Expression:exp DOT LENGTH
-	{:sb.setLength(0);RESULT = sb.append("Exp(").append(exp).append(".length )").toString();:}
-| Expression:exp DOT Identifier:id PARENTHLEFT ExpArguments:args PARENTHRIGHT
-	{:sb.setLength(0);RESULT = sb.append("Exp(").append(exp).append(".").append(id).append("( ").append(args).append(" ) )").toString();:}
-| NUMBER_LIT:num 
-	{:sb.setLength(0);RESULT =sb.append("Exp(").append(num).append(")").toString();:}
-| TRUE	
-	{:RESULT ="Exp(true)"; :}
-| FALSE 
-	{:RESULT ="Exp(false)"; :}
-| Identifier:id 
-	{:sb.setLength(0);RESULT =sb.append("Exp(").append(id).append(")").toString();:}
-| THIS 
-	{:RESULT ="Exp(this)"; :}
-| NEW INT BRACKETSLEFT Expression:exp BRACKETSRIGHT
-	{:sb.setLength(0);RESULT = sb.append("Exp( new int[").append(exp).append("])").toString();:}
-| NEW Identifier:id PARENTHLEFT PARENTHRIGHT
-	{:sb.setLength(0);RESULT = sb.append("Exp(").append(id).append("() )").toString();:}
-| NOT Expression:exp
-	{:sb.setLength(0);RESULT = sb.append("Exp( !").append(exp).append(")").toString();:}
-| PARENTHLEFT Expression:exp PARENTHRIGHT
-	{:sb.setLength(0);RESULT = sb.append("Exp( (").append(exp).append(") )").toString();:};
-
-
-Identifier ::= IDENTIFIER:id {:sb.setLength(0);RESULT = sb.append("Id( ").append(id).append(" )").toString(); :};
+        {: RESULT = new MainClass(id,arg, stm); :};
+ 
+ClassDeclaration  ::=  CLASS Identifier:id EXTENDS Identifier:exId CURLBRACKETSLEFT VarDeclarations:vars MethodDeclarations:methods CURLBRACKETSRIGHT
+                {: RESULT = new ClassDeclExtends(id, exId, vars, methods);:}
+                      | CLASS Identifier:id CURLBRACKETSLEFT VarDeclarations:vars MethodDeclarations:methods CURLBRACKETSRIGHT
+                            {: RESULT = new ClassDeclSimple(id, vars, methods); :};
+ 
+VarDeclaration  ::= Type:tp Identifier:id SEMICOLON {:RESULT = new VarDecl(tp,id);:};                      
+ 
+MethodDeclaration ::= PUBLIC Type:tp Identifier:id PARENTHLEFT Args:args PARENTHRIGHT CURLBRACKETSLEFT VarDeclarations:vars Statements:stmts RETURN Expression:retExp SEMICOLON CURLBRACKETSRIGHT
+           {: RESULT = new MethodDecl(tp,id,args,vars,stmts,retExp); :};
+ 
+ 
+Type  ::= INT BRACKETSLEFT BRACKETSRIGHT  {:RESULT = new IntArrayType();:}
+        | BOOLEAN             {:RESULT = new BooleanType();:}
+        | INT                 {:RESULT = new IntegerType();:}
+        | Identifier:id           {:RESULT = new IdentifierType(id);:};
+ 
+ 
+Statement ::= CURLBRACKETSLEFT Statements:stmts CURLBRACKETSRIGHT {: RESULT= new Block(stmts); :}
+            | IF PARENTHLEFT Expression:exp PARENTHRIGHT Statement:stmt ELSE Statement:stmt2 {: RESULT= new If(exp, stmt, stmt2);:}
+            | WHILE PARENTHLEFT Expression:exp PARENTHRIGHT Statement:stmt {: RESULT= new While(exp,stmt); :}
+            | SYSO PARENTHLEFT Expression:exp PARENTHRIGHT SEMICOLON {: RESULT= new Print(exp);:}
+            | Identifier:id ASSIGN Expression:exp SEMICOLON {: RESULT= new Assign(id,exp); :}
+            | Identifier:id BRACKETSLEFT Expression:indexExp BRACKETSRIGHT ASSIGN Expression:exp SEMICOLON {: RESULT= new ArrayAssign(id, indexExp, exp); :};
+ 
+ExpressionList ::= ExpressionList:el Expression:e SEMICOLON   {: el.addElement(e); RESULT = el; :}
+            |                            {: RESULT = new ExpList(); :};
+ 
+Expression  ::= Expression:e1 PLUS Expression:e2 {:RESULT = new Plus(e1,e2);:}
+              | Expression:e1 MINUS Expression:e2 {:RESULT = new Minus(e1,e2);:}
+              | Expression:e1 AND Expression:e2 {:RESULT = new And(e1,e2);:}
+              | Expression:e1 MULT Expression:e2 {:RESULT = new Times(e1,e2);:}
+              | Expression:e1 LT Expression:e2 {:RESULT = new LessThan(e1,e2);:}
+              | Expression:e1 BRACKETSLEFT Expression:ebrkt BRACKETSRIGHT {:RESULT = new ArrayLookup(e1,ebrkt);:}
+              | Expression:exp DOT LENGTH {: RESULT = new ArrayLenght(exp); :}
+              | Expression:exp DOT Identifier:id PARENTHLEFT Args:args PARENTHRIGHT {: RESULT = new Call(exp,id,args);:}
+              | NUMBER_LIT:num {: RETURN = new IntegerLiteral(num);:}
+              | TRUE  {:RESULT = new True(); :}
+              | FALSE   {:RESULT = new False(); :}
+              | Identifier:id {: RESULT = new IdentifierExp(id); :}
+              | THIS {:RESULT = new This(); :}
+              | NEW INT BRACKETSLEFT Expression:exp BRACKETSRIGHT {:RESULT = new NewArray(exp);:}
+              | NEW Identifier:id PARENTHLEFT PARENTHRIGHT {: RESULT = new NewObject(id); :}
+              | NOT Expression:exp{:RESULT = new Not(exp); :};
+              // PARENTHLEFT Expression:exp PARENTHRIGHT {: RESULT = new  :};
+ 
+ 
+Identifier ::= IDENTIFIER:id {: RESULT = new Identifier(id); :};
