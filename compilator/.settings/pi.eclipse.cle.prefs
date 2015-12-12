@@ -1,0 +1,11 @@
+//src/main/cupparser.cup/cup-compact-red=false
+//src/main/cupparser.cup/cup-debug=false
+//src/main/cupparser.cup/cup-expected-conflicts=0
+//src/main/cupparser.cup/cup-no-positions=false
+//src/main/cupparser.cup/cup-no-scanner=false
+//src/main/cupparser.cup/cup-non-terms=false
+//src/main/cupparser.cup/cup-output=src
+//src/main/cupparser.cup/cup-parser-class=CupparserCup
+//src/main/cupparser.cup/cup-symbols-class=CupparserSym
+//src/main/cupparser.cup/cup-symbols-if=true
+eclipse.preferences.version=1
